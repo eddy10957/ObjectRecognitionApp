@@ -84,40 +84,56 @@ class ViewController: UIViewController, AVCaptureVideoDataOutputSampleBufferDele
     }
     
     func requestPermission() {
+        // La coda delle sessioni viene sospesa in attesa della risposta dell'utente alla richiesta di autorizzazione.
         sessionQueue.suspend()
+        
+        // Si effettua la richiesta per ottenere l'accesso alla fotocamera.
         AVCaptureDevice.requestAccess(for: .video) { [unowned self] granted in
+            // Se l'autorizzazione viene concessa, la variabile 'permissionGranted' viene impostata di conseguenza.
             self.permissionGranted = granted
+            
+            // La coda delle sessioni viene ripresa.
             self.sessionQueue.resume()
         }
     }
-    
+
     func setupCaptureSession() {
-        // Camera input
-        guard let videoDevice = AVCaptureDevice.default(.builtInDualWideCamera,for: .video, position: .back) else { return }
+        // Si tenta di utilizzare la fotocamera posteriore.
+        guard let videoDevice = AVCaptureDevice.default(.builtInDualWideCamera, for: .video, position: .back) else { return }
+        
+        // Si tenta di creare un nuovo input da videoDevice.
         guard let videoDeviceInput = try? AVCaptureDeviceInput(device: videoDevice) else { return }
-           
+        
+        // Si verifica se l'input può essere aggiunto alla sessione di cattura.
         guard captureSession.canAddInput(videoDeviceInput) else { return }
+        
+        // L'input viene aggiunto alla sessione di cattura.
         captureSession.addInput(videoDeviceInput)
-                         
-        // Preview layer
+        
+        // Si configurano le dimensioni dello schermo per il layer di anteprima.
         screenRect = UIScreen.main.bounds
         
+        // Si configura il layer di anteprima video.
         previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
         previewLayer.frame = CGRect(x: 0, y: 0, width: screenRect.size.width, height: screenRect.size.height)
-        previewLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill // Fill screen
+        previewLayer.videoGravity = AVLayerVideoGravity.resizeAspectFill // Viene impostato per riempire lo schermo mantenendo le proporzioni.
         previewLayer.connection?.videoOrientation = .portrait
         previewLayer.zPosition = 0
-        // Detector
+        
+        // Si configura il rilevatore di oggetti in tempo reale.
         videoOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "sampleBufferQueue"))
         captureSession.addOutput(videoOutput)
         
+        // L'orientamento del video viene impostato in modalità portrait.
         videoOutput.connection(with: .video)?.videoOrientation = .portrait
         
-        // Updates to UI must be on main queue
+        // Gli aggiornamenti all'interfaccia utente vengono eseguiti sulla coda principale.
         DispatchQueue.main.async {
+            // Il layer di anteprima viene aggiunto alla vista.
             self.view.layer.addSublayer(self.previewLayer)
         }
     }
+
 }
 
 struct HostedViewController: UIViewControllerRepresentable {
